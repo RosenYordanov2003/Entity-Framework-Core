@@ -42,6 +42,7 @@
             {
                 sb.AppendLine($"-AlbumName: {album.Name}");
                 sb.AppendLine($"-ReleaseDate: {album.AlbumReleaseDate}");
+                sb.AppendLine($"-ProducerName: {album.ProducerName}");
                 sb.AppendLine("-Songs:");
                 int songCounter = 0;
                 foreach (var song in album.AlbumSongs)
