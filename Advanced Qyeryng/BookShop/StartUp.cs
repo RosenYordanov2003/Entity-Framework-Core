@@ -1,13 +1,14 @@
 ﻿namespace BookShop
 {
-    using BookShop.Models;
     using BookShop.Models.Enums;
     using Data;
     using Initializer;
-    using System;
     using System.Collections.Generic;
     using System.Linq;
     using System.Text;
+    using System;
+    using BookShop.Models;
+    using System.Drawing;
 
     public class StartUp
     {
@@ -15,7 +16,9 @@
         {
             using var db = new BookShopContext();
             DbInitializer.ResetDatabase(db);
-            string result = GetBooksByCategory(db, "horror mystery drama");
+            //string input = Console.ReadLine();
+            int input = int.Parse(Console.ReadLine());
+            int result = CountBooks(db, input);
             Console.WriteLine(result);
         }
         //01 Age Restriction
@@ -83,27 +86,111 @@
             return sb.ToString().TrimEnd();
         }
         //05 Book Titles by Category
-        //public static string GetBooksByCategory(BookShopContext context, string input)
-        //{
-        //    StringBuilder sb = new StringBuilder();
-        //    //var books = context.Books
-        //    //    .Select(b => new { bookTitle = b.Title, bookCategories = b.BookCategories})
-        //    //    .OrderBy(t=>t.bookTitle)
-        //    //    .ToList();
-        //    //sb.Append("Hello");
+        public static string GetBooksByCategory(BookShopContext context, string input)
+        {
+            string[] arrayInput = input.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            StringBuilder sb = new StringBuilder();
+            var result = context.Books
+                .Select(x => new
+                {
+                    Categories = x.BookCategories.ToList(),
+                    Title = x.Title
+                }).OrderBy(b => b.Title).ToList();
 
-        //    //var result = books.Where(b=>GetPredicate(b.bookCategories,input)).ToList();
-        //    var result = context.Books
-        //        .Select(x => new
-        //        {
-        //            CategoryName = x.BookCategories.Select(c=>c.Category.Name),
-        //            Title = x.Title
-        //        }).ToList();
-        //    foreach (var item in result)
-        //    {
-        //        sb.AppendLine(item.CategoryName.);
-        //    }
-        //    return sb.ToString().TrimEnd();
-        //}
+            foreach (var book in result)
+            {
+                foreach (var category in book.Categories)
+                {
+                    string name = category.Category.Name.ToLower();
+                    if (arrayInput.Contains(name))
+                    {
+                        sb.AppendLine(book.Title);
+                    }
+                }
+            }
+            return sb.ToString().TrimEnd();
+        }
+
+        //06 Released Before Date
+        public static string GetBooksReleasedBefore(BookShopContext context, string date)
+        {
+            DateTime dateInput = DateTime.Parse(date);
+            StringBuilder sb = new StringBuilder();
+
+            var result = context.Books.Where(b => DateTime.Compare(b.ReleaseDate.Value, dateInput) < 0)
+                .OrderByDescending(b => b.ReleaseDate)
+                .Select(b => new
+                {
+                    BookTitle = b.Title,
+                    BookEdition = b.EditionType,
+                    BookPrice = b.Price
+                })
+                .ToList();
+            foreach (var book in result)
+            {
+                sb.AppendLine($"{book.BookTitle} - {book.BookEdition} - ${book.BookPrice:F2}");
+            }
+            return sb.ToString();
+        }
+
+        //07 Author Search
+        public static string GetAuthorNamesEndingIn(BookShopContext context, string input)
+        {
+            StringBuilder sb = new StringBuilder();
+            var authors = context.Authors.Where(a => a.FirstName.EndsWith(input))
+                .Select(a => new
+                {
+                    FullName = $"{a.FirstName} {a.LastName}"
+                })
+              .ToList();
+            foreach (var author in authors.OrderBy(a => a.FullName))
+            {
+                sb.AppendLine(author.FullName);
+            }
+            return sb.ToString().Trim();
+        }
+
+        //08 Book Search
+        public static string GetBookTitlesContaining(BookShopContext context, string input)
+        {
+            StringBuilder sb = new StringBuilder();
+
+            List<string> books = context.Books
+                .OrderBy(b => b.Title)
+                .Select(b => b.Title)
+                .ToList();
+
+            foreach (string title in books.Where(t => t.Contains(input, StringComparison.OrdinalIgnoreCase)))
+            {
+                sb.AppendLine(title);
+            }
+            return sb.ToString().Trim();
+        }
+
+        //09 Book Search by Author
+        public static string GetBooksByAuthor(BookShopContext context, string input)
+        {
+            StringBuilder sb = new StringBuilder();
+            var books = context.Books
+                .OrderBy(b=>b.BookId)
+                .Where(b=>b.Author.LastName.StartsWith(input))
+                .Select(b => new
+                {
+                    BookTitle = b.Title,
+                    AuthorFullName = $"{b.Author.FirstName} {b.Author.LastName}"
+                }).ToList();
+            foreach (var book in books)
+            {
+                sb.AppendLine($"{book.BookTitle} ({book.AuthorFullName})");
+            }
+            return sb.ToString().Trim();
+        }
+        //10 Count Books
+        public static int CountBooks(BookShopContext context, int lengthCheck)
+        {
+            int booksCount = context.Books.Where(b => b.Title.Length > lengthCheck)
+                .Count();
+           return booksCount;
+        }
     }
 }
