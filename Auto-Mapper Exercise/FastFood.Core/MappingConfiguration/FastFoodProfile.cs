@@ -8,8 +8,10 @@
     using FastFood.Services.Models.Categories;
     using FastFood.Services.Models.Employees;
     using FastFood.Services.Models.Items;
-    using FastFood.Services.Models.Orders;
     using ViewModels.Positions;
+    using System;
+    using FastFood.Core.ViewModels.Orders;
+    using FastFood.Services.Models.Orders;
 
     public class FastFoodProfile : Profile
     {
@@ -59,6 +61,16 @@
 
             this.CreateMap<ListItemDto, ItemsAllViewModels>();
 
+            //Orders
+
+            //this.CreateMap<CreateItemInputModel, Order>()
+            //    .ForMember(d => d.DateTime, m => m.MapFrom(y => DateTime.Now));
+
+            this.CreateMap<Order, ListOrderDto>().
+                ForMember(d=>d.OrderId,m=>m.MapFrom(s=>s.Id))
+                .ForMember(d=>d.DateTime,m=>m.MapFrom(s=>DateTime.Now));
+
+            this.CreateMap<ListOrderDto, OrderAllViewModel>();
         }
     }
 }

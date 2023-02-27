@@ -1,9 +1,15 @@
 ﻿namespace FastFood.Core.Controllers
 {
     using System;
+    using System.Collections;
+    using System.Collections.Generic;
     using System.Linq;
+    using System.Threading.Tasks;
     using AutoMapper;
     using Data;
+    using FastFood.Models;
+    using FastFood.Services.Contracts;
+    using FastFood.Services.Models.Orders;
     using Microsoft.AspNetCore.Mvc;
     using ViewModels.Orders;
 
@@ -11,11 +17,13 @@
     {
         private readonly FastFoodContext context;
         private readonly IMapper mapper;
+        private readonly IOrderService orderService;
 
-        public OrdersController(FastFoodContext context, IMapper mapper)
+        public OrdersController(FastFoodContext context, IMapper mapper, IOrderService orderService)
         {
             this.context = context;
             this.mapper = mapper;
+            this.orderService = orderService;
         }
 
         public IActionResult Create()
@@ -30,16 +38,29 @@
         }
 
         [HttpPost]
-        public IActionResult Create(CreateOrderInputModel model)
-        { 
+        public async Task<IActionResult> Create(CreateOrderInputModel model)
+        {
+            Order order = new Order { Customer = model.Customer,EmployeeId = model.EmployeeId};
+            order.OrderItems.Add(new OrderItem { ItemId = model.ItemId ,Quantity = model.Quantity});
 
+            this.context.Orders.Add(order);
+            await this.context.SaveChangesAsync();
 
             return this.RedirectToAction("All", "Orders");
         }
 
-        public IActionResult All()
+        public async Task<IActionResult> All()
         {
-            throw new NotImplementedException();
+            IList<OrderAllViewModel> allOrders = new List<OrderAllViewModel>();
+
+            ICollection<ListOrderDto> orders = await this.orderService.GetAllOrders();
+
+            foreach (ListOrderDto order in orders)
+            {
+                allOrders.Add(this.mapper.Map<OrderAllViewModel>(order));
+            }
+
+            return this.View(allOrders);
         }
     }
 }
