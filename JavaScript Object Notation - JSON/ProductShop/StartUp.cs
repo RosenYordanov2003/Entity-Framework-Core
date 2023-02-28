@@ -2,13 +2,16 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.IO;
+using System.Linq;
 using AutoMapper;
+using AutoMapper.QueryableExtensions;
 using Newtonsoft.Json;
 using ProductShop.Data;
 using ProductShop.DTOs.Categories;
 using ProductShop.DTOs.Categories_and_Products_Dto;
 using ProductShop.DTOs.Products;
 using ProductShop.DTOs.Users;
+using ProductShop.DTOs.Users_And_Product_Dto;
 using ProductShop.Models;
 
 namespace ProductShop
@@ -21,9 +24,8 @@ namespace ProductShop
             ProductShopContext context = new ProductShopContext();
             //context.Database.EnsureDeleted();
             //context.Database.EnsureCreated();
-            string inputJson = File.ReadAllText("../../../Datasets/categories-products.json");
-            string result = ImportCategoryProducts(context, inputJson);
-            Console.WriteLine(result);
+            string json = GetUsersWithProducts(context);
+            File.WriteAllText("../../../Datasets/users-and-products.json", json);
         }
         //02. Import Users
         public static string ImportUsers(ProductShopContext context, string inputJson)
@@ -42,6 +44,7 @@ namespace ProductShop
             return string.Format($"Successfully imported {users.Length}");
         }
         //03 Import Products
+
         public static string ImportProducts(ProductShopContext context, string inputJson)
         {
             ProductDto[] products = JsonConvert.DeserializeObject<ProductDto[]>(inputJson);
@@ -62,7 +65,6 @@ namespace ProductShop
             return string.Format($"Successfully imported {productsToAdd.Count}");
         }
         //04 Import Categories
-
         public static string ImportCategories(ProductShopContext context, string inputJson)
         {
             CategoryDto[] categories = JsonConvert.DeserializeObject<CategoryDto[]>(inputJson);
@@ -79,11 +81,11 @@ namespace ProductShop
             context.SaveChanges();
             return string.Format($"Successfully imported {categoriesToAdd.Count}");
         }
-        //05 Import Categories and Products
 
+        //05 Import Categories and Products
         public static string ImportCategoryProducts(ProductShopContext context, string inputJson)
         {
-            CategoryProductDto[]categoryProducts = JsonConvert.DeserializeObject<CategoryProductDto[]>(inputJson);
+            CategoryProductDto[] categoryProducts = JsonConvert.DeserializeObject<CategoryProductDto[]>(inputJson);
 
             ICollection<CategoryProduct> collectionToAdd = new List<CategoryProduct>();
 
@@ -98,6 +100,59 @@ namespace ProductShop
             context.SaveChanges();
 
             return string.Format($"Successfully imported {collectionToAdd.Count}");
+        }
+
+        //06 Export Products In Range
+        public static string GetProductsInRange(ProductShopContext context)
+        {
+            ExportProductInRangeDto[] result = context.Products
+                .Where(p => p.Price >= 500 && p.Price <= 1000)
+                .OrderBy(p => p.Price)
+                .ProjectTo<ExportProductInRangeDto>()
+                .ToArray();
+
+            string json = JsonConvert.SerializeObject(result, Formatting.Indented);
+
+            return json;
+        }
+
+        //07 Export Sold Products
+        public static string GetSoldProducts(ProductShopContext context)
+        {
+            SoldProductsDto[] result = context.Users
+                .Where(u => u.ProductsSold.Any(p => p.BuyerId.HasValue))
+               .OrderBy(u => u.LastName)
+               .ThenBy(u => u.FirstName)
+               .ProjectTo<SoldProductsDto>()
+               .ToArray();
+
+            string json = JsonConvert.SerializeObject(result, Formatting.Indented);
+
+            return json;
+        }
+
+        //08 Export Categories By Products Count
+        public static string GetCategoriesByProductsCount(ProductShopContext context)
+        {
+            ExportCategoryDto[] result = context.Categories
+                 .OrderByDescending(c => c.CategoryProducts.Count)
+                 .ProjectTo<ExportCategoryDto>()
+                 .ToArray();
+            string json = JsonConvert.SerializeObject(result, Formatting.Indented);
+            return json;
+        }
+
+        //09 Export Users and Products
+        //Not solved
+        public static string GetUsersWithProducts(ProductShopContext context)
+        {
+            MainUserAndProductsClass[] users = context.Users
+                .Where(u => u.ProductsSold.Any(p => p.BuyerId.HasValue))
+                .OrderByDescending(p => p.ProductsSold.Count)
+                .ProjectTo<MainUserAndProductsClass>()
+                .ToArray();
+            string json = JsonConvert.SerializeObject(users, Formatting.Indented);
+            return json;
         }
 
         private static bool IsValid(object obj)

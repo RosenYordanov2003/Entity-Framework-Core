@@ -1,8 +1,9 @@
-﻿using ProductShop.Models;
-using System.ComponentModel.DataAnnotations;
-
-namespace ProductShop.DTOs.Products
+﻿namespace ProductShop.DTOs.Products
 {
+    using Newtonsoft.Json;
+    using System.ComponentModel.DataAnnotations;
+
+    [JsonObject]
     public class ProductDto
     {
         [MinLength(3),Required] 

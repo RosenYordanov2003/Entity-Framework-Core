@@ -3,6 +3,7 @@
     using Newtonsoft.Json;
     using System.ComponentModel.DataAnnotations;
 
+    [JsonObject]
     public class CategoryDto
     {
         [MinLength(3),MaxLength(15)]
