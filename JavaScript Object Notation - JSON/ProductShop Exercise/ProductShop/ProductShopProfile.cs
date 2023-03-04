@@ -24,27 +24,18 @@
             this.CreateMap<Product, ExportProductInRangeDto>()
                 .ForMember(d => d.SellerFullName, m => m.MapFrom(s => $"{s.Seller.FirstName} {s.Seller.LastName}"));
 
-            this.CreateMap<Product, BuyerBoughtProductsDto>()
+            this.CreateMap<Product, BoughtProductsDto>()
                 .ForMember(d => d.BuyerFirstName, m => m.MapFrom(s => s.Buyer.FirstName))
                 .ForMember(d => d.BuyerLastName, m => m.MapFrom(s => s.Buyer.LastName));
 
-            this.CreateMap<User, SoldProductsDto>()
+            this.CreateMap<User, UsersSoldProductsDto>()
                 .ForMember(d=>d.SoldProducts,m=>m.MapFrom(s=>s.ProductsSold.Where(p=>p.BuyerId.HasValue)));
 
             this.CreateMap<Category, ExportCategoryDto>()
                 .ForMember(d => d.CategoryName, m => m.MapFrom(s => s.Name))
                 .ForMember(d => d.ProductCount, m => m.MapFrom(s => s.CategoryProducts.Count))
                 .ForMember(d => d.AveragePrice, m => m.MapFrom(s => $"{s.CategoryProducts.Average(p => p.Product.Price):F2}"))
-                .ForMember(d => d.TotalRevenue, m => m.MapFrom(s => $"{s.CategoryProducts.Sum(p => p.ProductId):F2}"));
-
-            this.CreateMap<User, MainUserAndProductsClass>()
-                .ForMember(d => d.Count, m => m.MapFrom(s => s.ProductsSold.Where(p => p.BuyerId.HasValue).Count()));
-
-            this.CreateMap<User, UserAndProductUserDto>()
-                .ForMember(d => d.Count, m => m.MapFrom(s => s.ProductsSold.Count));
-
-            this.CreateMap<Product, UsersAndProductsProductDto>()
-                .ForMember(d => d.ProductName, m => m.MapFrom(s => s.Name));
+                .ForMember(d => d.TotalRevenue, m => m.MapFrom(s => $"{s.CategoryProducts.Sum(p => p.Product.Price):F2}"));
         }
     }
 }

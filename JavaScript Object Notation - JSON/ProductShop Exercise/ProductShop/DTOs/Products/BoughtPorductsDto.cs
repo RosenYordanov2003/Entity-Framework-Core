@@ -1,9 +1,9 @@
-﻿using Newtonsoft.Json;
-
-namespace ProductShop.DTOs.Users
+﻿namespace ProductShop.DTOs.Products
 {
+    using Newtonsoft.Json;
+
     [JsonObject]
-    public class BuyerBoughtProductsDto
+    public class BoughtProductsDto
     {
         [JsonProperty("name")]
         public string Name { get; set; }
@@ -11,10 +11,10 @@ namespace ProductShop.DTOs.Users
         [JsonProperty("price")]
         public decimal Price { get; set; }
 
-        [JsonProperty("buterFirstName")]
+        [JsonProperty("buyerFirstName")]
         public string BuyerFirstName { get; set; }
 
-        [JsonProperty("buterLastName")]
+        [JsonProperty("buyerLastName")]
         public string BuyerLastName { get; set; }
     }
 }

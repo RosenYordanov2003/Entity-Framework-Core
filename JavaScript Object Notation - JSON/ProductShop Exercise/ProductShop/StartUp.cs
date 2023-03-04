@@ -119,12 +119,12 @@ namespace ProductShop
         //07 Export Sold Products
         public static string GetSoldProducts(ProductShopContext context)
         {
-            SoldProductsDto[] result = context.Users
+            UsersSoldProductsDto[] result = context.Users
                 .Where(u => u.ProductsSold.Any(p => p.BuyerId.HasValue))
-               .OrderBy(u => u.LastName)
-               .ThenBy(u => u.FirstName)
-               .ProjectTo<SoldProductsDto>()
-               .ToArray();
+                .OrderBy(u => u.LastName)
+                .ThenBy(u => u.FirstName)
+                .ProjectTo<UsersSoldProductsDto>()
+                .ToArray();
 
             string json = JsonConvert.SerializeObject(result, Formatting.Indented);
 
@@ -146,12 +146,31 @@ namespace ProductShop
         //Not solved
         public static string GetUsersWithProducts(ProductShopContext context)
         {
-            MainUserAndProductsClass[] users = context.Users
-                .Where(u => u.ProductsSold.Any(p => p.BuyerId.HasValue))
-                .OrderByDescending(p => p.ProductsSold.Count)
-                .ProjectTo<MainUserAndProductsClass>()
-                .ToArray();
-            string json = JsonConvert.SerializeObject(users, Formatting.Indented);
+            JsonSerializerSettings settings = new JsonSerializerSettings()
+            {
+                NullValueHandling = NullValueHandling.Ignore,
+            };
+            ExportUserCollectionsDto dto = new ExportUserCollectionsDto()
+            {
+                Users = context.Users.Where(u => u.ProductsSold.Any(p => p.BuyerId.HasValue))
+                .OrderByDescending(u => u.ProductsSold.Where(p => p.BuyerId.HasValue).Count())
+                .Select(x => new ExportUsersDto
+                {
+                    FirstName = x.FirstName,
+                    LastName = x.LastName,
+                    Age = x.Age,
+                    SoldProducts = new ExportProductsDto
+                    {
+                        Products = x.ProductsSold.Where(p => p.BuyerId.HasValue)
+                        .Select(x => new ExportProducCollectionDto
+                        {
+                            Name = x.Name,
+                            Price = x.Price,
+                        }).ToArray()
+                    }
+                }).ToArray()
+            };
+            string json = JsonConvert.SerializeObject(dto, Formatting.Indented, settings);
             return json;
         }
 

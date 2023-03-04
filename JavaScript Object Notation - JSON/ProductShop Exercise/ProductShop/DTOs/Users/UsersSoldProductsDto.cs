@@ -1,18 +1,19 @@
 ﻿using Newtonsoft.Json;
+using ProductShop.DTOs.Products;
 
 namespace ProductShop.DTOs.Users
 {
     [JsonObject]
-    public class SoldProductsDto
+    public class UsersSoldProductsDto
     {
         [JsonProperty("firstName")]
         public string FirstName { get; set; }
 
-        [JsonProperty("lasttName")]
+        [JsonProperty("lastName")]
         public string LastName { get; set; }
 
         [JsonProperty("soldProducts")]
-        public BuyerBoughtProductsDto[] SoldProducts { get; set; }
+        public BoughtProductsDto[] SoldProducts { get; set; }
 
     }
 }

@@ -1,21 +1,20 @@
 ﻿namespace ProductShop.DTOs.Categories
 {
     using Newtonsoft.Json;
-    using System.Text.Json.Serialization;
 
     [JsonObject]
     public class ExportCategoryDto
     {
-        [JsonPropertyName("category")]
+        [JsonProperty("category")]
         public string CategoryName { get; set; }
 
-        [JsonPropertyName("productsCount")]
+        [JsonProperty("productsCount")]
         public int ProductCount { get; set; }
 
-        [JsonPropertyName("averagePrice")]
+        [JsonProperty("averagePrice")]
         public string AveragePrice { get; set; }
 
-        [JsonPropertyName("totalRevenue")]
+        [JsonProperty("totalRevenue")]
         public string TotalRevenue { get; set; }
     }
 }
