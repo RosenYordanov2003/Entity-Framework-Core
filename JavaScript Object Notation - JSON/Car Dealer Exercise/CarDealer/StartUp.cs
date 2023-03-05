@@ -161,12 +161,10 @@
             string json = JsonConvert.SerializeObject(cars, Formatting.Indented);
             return json;
         }
-        //10 Export Cars With Their List Of Parts Not solved
+        //10 Export Cars With Their List Of Parts
         public static string GetCarsWithTheirListOfParts(CarDealerContext context)
         {
-            //var result = context.PartCars
-            //    .ProjectTo<PartCarDto>()
-            //    .ToArray();
+           oArray();
 
             var result = context.Cars
                 .Select(x => new
