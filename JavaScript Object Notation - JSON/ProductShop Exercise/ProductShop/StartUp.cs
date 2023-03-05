@@ -143,7 +143,6 @@ namespace ProductShop
         }
 
         //09 Export Users and Products
-        //Not solved
         public static string GetUsersWithProducts(ProductShopContext context)
         {
             JsonSerializerSettings settings = new JsonSerializerSettings()
