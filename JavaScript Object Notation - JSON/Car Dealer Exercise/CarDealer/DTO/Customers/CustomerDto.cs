@@ -6,13 +6,13 @@
     [JsonObject]
     public class CustomerDto
     {
-        [JsonProperty("name")]
+        [JsonProperty("Name")]
         public string Name { get; set; }
 
-        [JsonProperty("birthDate")]
+        [JsonProperty("BirthDate")]
         public DateTime BirthDate { get; set; }
 
-        [JsonProperty("isYoungDriver")]
+        [JsonProperty("IsYoungDriver")]
         public bool IsYoungDriver { get; set; }
     }
 }
