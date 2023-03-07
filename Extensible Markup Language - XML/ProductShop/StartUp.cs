@@ -1,186 +1,255 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.IO;
-using System.Linq;
-using AutoMapper;
-using AutoMapper.QueryableExtensions;
-using Newtonsoft.Json;
-using ProductShop.Data;
-using ProductShop.DTOs.Categories;
-using ProductShop.DTOs.Categories_and_Products_Dto;
-using ProductShop.DTOs.Products;
-using ProductShop.DTOs.Users;
-using ProductShop.DTOs.Users_And_Product_Dto;
-using ProductShop.Models;
-
-namespace ProductShop
+﻿namespace ProductShop
 {
+    using System;
+    using ProductShop.Data;
+    using ProductShop.Dtos.Import;
+    using ProductShop.Models;
+    using System.IO;
+    using System.Linq;
+    using System.Xml.Serialization;
+    using System.Collections.Generic;
+    using ProductShop.Dtos.Export;
+    using System.Text;
+
     public class StartUp
     {
+        private const string MainPath = "../../../Datasets/";
+
         public static void Main(string[] args)
         {
-            Mapper.Initialize(cfg => cfg.AddProfile(typeof(ProductShopProfile)));
             ProductShopContext context = new ProductShopContext();
-            //context.Database.EnsureDeleted();
-            //context.Database.EnsureCreated();
-            string json = GetUsersWithProducts(context);
-            File.WriteAllText("../../../Datasets/users-and-products.json", json);
+            string inputXmlFile = File.ReadAllText($"{MainPath}categories-products.xml");
+            Console.WriteLine(GetUsersWithProducts(context));
         }
-        //02. Import Users
-        public static string ImportUsers(ProductShopContext context, string inputJson)
+
+        //01 Import Users
+        public static string ImportUsers(ProductShopContext context, string inputXml)
         {
-            ICollection<User> usersToAdd = new List<User>();
-            UserDto[] users = JsonConvert.DeserializeObject<UserDto[]>(inputJson);
-            foreach (UserDto user in users)
-            {
-                if (IsValid(user))
+            XmlRootAttribute root = new XmlRootAttribute("Users");
+            XmlSerializer serializer = new XmlSerializer(typeof(ImportUserDto[]), root);
+            using StringReader stringReader = new StringReader(inputXml);
+            ImportUserDto[] users = (ImportUserDto[])serializer.Deserialize(stringReader);
+
+            User[] usersToAdd = users
+                .Select(u => new User
                 {
-                    usersToAdd.Add(Mapper.Map<User>(user));
-                }
-            }
+                    FirstName = u.FirstName,
+                    LastName = u.LastName,
+                    Age = u.Age
+                }).ToArray();
+
             context.Users.AddRange(usersToAdd);
             context.SaveChanges();
-            return string.Format($"Successfully imported {users.Length}");
+            return $"Successfully imported {usersToAdd.Length}";
         }
-        //03 Import Products
+        //02 Import Products
 
-        public static string ImportProducts(ProductShopContext context, string inputJson)
+        public static string ImportProducts(ProductShopContext context, string inputXml)
         {
-            ProductDto[] products = JsonConvert.DeserializeObject<ProductDto[]>(inputJson);
+            XmlRootAttribute root = new XmlRootAttribute("Products");
+            XmlSerializer serializer = new XmlSerializer(typeof(ImportProductsDto[]), root);
 
-            ICollection<Product> productsToAdd = new List<Product>();
+            using StringReader reader = new StringReader(inputXml);
 
-            foreach (ProductDto product in products)
-            {
-                if (IsValid(product))
+            ImportProductsDto[] products = (ImportProductsDto[])serializer.Deserialize(reader);
+
+            Product[] productsToAdd = products
+                .Select(p => new Product
                 {
-                    productsToAdd.Add(Mapper.Map<Product>(product));
-                }
-            }
+                    Name = p.Name,
+                    Price = p.Price,
+                    SellerId = p.SellerId,
+                    BuyerId = p.BuyerId
+                }).ToArray();
+
             context.Products.AddRange(productsToAdd);
-
             context.SaveChanges();
-
-            return string.Format($"Successfully imported {productsToAdd.Count}");
+            return $"Successfully imported {productsToAdd.Length}";
         }
-        //04 Import Categories
-        public static string ImportCategories(ProductShopContext context, string inputJson)
-        {
-            CategoryDto[] categories = JsonConvert.DeserializeObject<CategoryDto[]>(inputJson);
 
-            ICollection<Category> categoriesToAdd = new List<Category>();
-            foreach (CategoryDto category in categories)
-            {
-                if (IsValid(category))
+        //03 Import Categories
+        public static string ImportCategories(ProductShopContext context, string inputXml)
+        {
+            XmlRootAttribute root = new XmlRootAttribute("Categories");
+            XmlSerializer serializer = new XmlSerializer(typeof(ImportCategoryDto[]), root);
+
+            using StringReader reader = new StringReader(inputXml);
+
+            ImportCategoryDto[] categories = (ImportCategoryDto[])serializer.Deserialize(reader);
+
+            Category[] categoriesToAdd = categories
+                .Select(c => new Category
                 {
-                    categoriesToAdd.Add(Mapper.Map<Category>(category));
-                }
-            }
+                    Name = c.Name,
+                }).ToArray();
+
             context.Categories.AddRange(categoriesToAdd);
+
             context.SaveChanges();
-            return string.Format($"Successfully imported {categoriesToAdd.Count}");
+
+            return $"Successfully imported {categoriesToAdd.Length}";
         }
-
-        //05 Import Categories and Products
-        public static string ImportCategoryProducts(ProductShopContext context, string inputJson)
+        //04 Import Categories and Products
+        public static string ImportCategoryProducts(ProductShopContext context, string inputXml)
         {
-            CategoryProductDto[] categoryProducts = JsonConvert.DeserializeObject<CategoryProductDto[]>(inputJson);
+            XmlRootAttribute root = new XmlRootAttribute("CategoryProducts");
+            XmlSerializer serializer = new XmlSerializer(typeof(ImportCategoryProductDto[]), root);
 
-            ICollection<CategoryProduct> collectionToAdd = new List<CategoryProduct>();
+            StringReader reader = new StringReader(inputXml);
 
-            foreach (CategoryProductDto categoryProduct in categoryProducts)
+            ImportCategoryProductDto[] productsCategories = (ImportCategoryProductDto[])serializer.Deserialize(reader);
+
+            List<CategoryProduct> categoryProductsToAdd = new List<CategoryProduct>();
+
+            foreach (ImportCategoryProductDto item in productsCategories)
             {
-                if (IsValid(categoryProduct))
+                if (context.Products.Any(p => p.Id == item.ProductId) && context.Categories.Any(c => c.Id == item.CategoryId))
                 {
-                    collectionToAdd.Add(Mapper.Map<CategoryProduct>(categoryProduct));
+                    categoryProductsToAdd.Add(new CategoryProduct()
+                    {
+                        CategoryId = item.CategoryId,
+                        ProductId = item.ProductId
+                    });
                 }
             }
-            context.CategoryProducts.AddRange(collectionToAdd);
+
+            context.CategoryProducts.AddRange(categoryProductsToAdd);
             context.SaveChanges();
-
-            return string.Format($"Successfully imported {collectionToAdd.Count}");
+            return $"Successfully imported {categoryProductsToAdd.Count}";
         }
-
-        //06 Export Products In Range
+        // 05 Export Products In Range
         public static string GetProductsInRange(ProductShopContext context)
         {
-            ExportProductInRangeDto[] result = context.Products
+            StringBuilder sb = new StringBuilder();
+
+
+            ExportProductDto[] exportProducts = context.Products
                 .Where(p => p.Price >= 500 && p.Price <= 1000)
                 .OrderBy(p => p.Price)
-                .ProjectTo<ExportProductInRangeDto>()
+                .Take(10)
+                .Select(p => new ExportProductDto
+                {
+                    Name = p.Name,
+                    Price = p.Price,
+                    BuyerFullName = $"{p.Buyer.FirstName} {p.Buyer.LastName}"
+                })
                 .ToArray();
 
-            string json = JsonConvert.SerializeObject(result, Formatting.Indented);
+            XmlRootAttribute root = new XmlRootAttribute("Products");
+            XmlSerializer serializer = new XmlSerializer(typeof(ExportProductDto[]), root);
 
-            return json;
+            XmlSerializerNamespaces namespaces = new XmlSerializerNamespaces();
+            namespaces.Add(string.Empty, string.Empty);
+
+            StringWriter writer = new StringWriter(sb);
+
+            serializer.Serialize(writer, exportProducts, namespaces);
+
+            return sb.ToString().TrimEnd();
         }
-
-        //07 Export Sold Products
+        //06 Export Sold Products
         public static string GetSoldProducts(ProductShopContext context)
         {
-            UsersSoldProductsDto[] result = context.Users
-                .Where(u => u.ProductsSold.Any(p => p.BuyerId.HasValue))
+            StringBuilder sb = new StringBuilder();
+
+            ExportUserDto[] exportUsers = context.Users
+                .Where(u => u.ProductsSold.Count > 0)
                 .OrderBy(u => u.LastName)
                 .ThenBy(u => u.FirstName)
-                .ProjectTo<UsersSoldProductsDto>()
-                .ToArray();
+                .Take(5)
+                .Select(u => new ExportUserDto
+                {
+                    FirstName = u.FirstName,
+                    LastName = u.LastName,
+                    SoldProducts = u.ProductsSold.Select(p => new ExportProductDto()
+                    {
+                        Name = p.Name,
+                        Price = p.Price
+                    }).ToArray()
+                }).ToArray();
 
-            string json = JsonConvert.SerializeObject(result, Formatting.Indented);
+            XmlRootAttribute root = new XmlRootAttribute("Users");
+            XmlSerializer serializer = new XmlSerializer(typeof(ExportUserDto[]), root);
 
-            return json;
+            XmlSerializerNamespaces namespaces = new XmlSerializerNamespaces();
+            namespaces.Add(string.Empty, string.Empty);
+
+            StringWriter writer = new StringWriter(sb);
+
+            serializer.Serialize(writer, exportUsers, namespaces);
+
+            return sb.ToString().TrimEnd();
         }
-
-        //08 Export Categories By Products Count
+        //07 Export Categories By Products Count
         public static string GetCategoriesByProductsCount(ProductShopContext context)
         {
-            ExportCategoryDto[] result = context.Categories
-                 .OrderByDescending(c => c.CategoryProducts.Count)
-                 .ProjectTo<ExportCategoryDto>()
-                 .ToArray();
-            string json = JsonConvert.SerializeObject(result, Formatting.Indented);
-            return json;
+            StringBuilder sb = new StringBuilder();
+
+            ExportCategoryDto[] exportCategories = context.Categories
+                .Select(c => new ExportCategoryDto
+                {
+                    Name = c.Name,
+                    Count = c.CategoryProducts.Count,
+                    AveragePrice = c.CategoryProducts.Count > 0 ? c.CategoryProducts.Average(c => c.Product.Price) : 0,
+                    TotalRevenue = c.CategoryProducts.Sum(p => p.Product.Price)
+                })
+                .OrderByDescending(p => p.Count)
+                .ThenBy(p => p.TotalRevenue)
+                .ToArray();
+            XmlRootAttribute root = new XmlRootAttribute("Categories");
+            XmlSerializer serializer = new XmlSerializer(typeof(ExportCategoryDto[]), root);
+
+            XmlSerializerNamespaces namespaces = new XmlSerializerNamespaces();
+            namespaces.Add(string.Empty, string.Empty);
+
+            StringWriter writer = new StringWriter(sb);
+
+            serializer.Serialize(writer, exportCategories, namespaces);
+
+            return sb.ToString().TrimEnd();
         }
 
-        //09 Export Users and Products
-        //Not solved
+        // 08 Export Users and Products
         public static string GetUsersWithProducts(ProductShopContext context)
         {
-            JsonSerializerSettings settings = new JsonSerializerSettings()
+            StringBuilder sb = new StringBuilder();
+
+            ExportUsersAndProductsDto result = new ExportUsersAndProductsDto()
             {
-                NullValueHandling = NullValueHandling.Ignore,
-            };
-            ExportUserCollectionsDto dto = new ExportUserCollectionsDto()
-            {
-                Users = context.Users.Where(u => u.ProductsSold.Any(p => p.BuyerId.HasValue))
-                .OrderByDescending(u => u.ProductsSold.Where(p => p.BuyerId.HasValue).Count())
-                .Select(x => new ExportUsersDto
+                Count = context.Users
+                .Where(u => u.ProductsSold.Count > 0).Count(),
+                Users = context.Users
+                .Where(u => u.ProductsSold.Count > 0)
+                .OrderByDescending(u => u.ProductsSold.Count)
+                .Select(u => new ExportUserDto
                 {
-                    FirstName = x.FirstName,
-                    LastName = x.LastName,
-                    Age = x.Age,
-                    SoldProducts = new ExportProductsDto
+                    FirstName = u.FirstName,
+                    LastName = u.LastName,
+                    Age = u.Age,
+                    Products = new ExportSoldProductsDto()
                     {
-                        Products = x.ProductsSold.Where(p => p.BuyerId.HasValue)
-                        .Select(x => new ExportProducCollectionDto
+                        Count = u.ProductsSold.Count,
+                        Producst = u.ProductsSold.OrderByDescending(p=>p.Price)
+                        .Select(p => new ExportProductDto
                         {
-                            Name = x.Name,
-                            Price = x.Price,
+                            Name = p.Name,
+                            Price = p.Price
                         }).ToArray()
+
                     }
-                }).ToArray()
+                })
+                .Take(10)
+                .ToArray()
             };
-            string json = JsonConvert.SerializeObject(dto, Formatting.Indented, settings);
-            return json;
-        }
+            XmlRootAttribute root = new XmlRootAttribute("Users");
+            XmlSerializer serializer = new XmlSerializer(typeof(ExportUsersAndProductsDto), root);
 
-        private static bool IsValid(object obj)
-        {
-            var validationContext = new System.ComponentModel.DataAnnotations.ValidationContext(obj);
-            var validationResult = new List<ValidationResult>();
+            XmlSerializerNamespaces namespaces = new XmlSerializerNamespaces();
+            namespaces.Add(string.Empty, string.Empty);
 
-            bool isValid = Validator.TryValidateObject(obj, validationContext, validationResult, true);
-            return isValid;
+            StringWriter writer = new StringWriter(sb);
+            serializer.Serialize(writer, result, namespaces);
+            return sb.ToString().TrimEnd();
         }
     }
 }
