@@ -1,8 +1,10 @@
 ﻿namespace CarDealer
 {
     using CarDealer.Data;
+    using CarDealer.DTOs.Export;
     using CarDealer.DTOs.Import;
     using CarDealer.Models;
+    using System.Text;
     using System.Xml.Serialization;
 
     public class StartUp
@@ -12,7 +14,7 @@
         {
             CarDealerContext carDealerContext = new CarDealerContext();
             string inputXml = File.ReadAllText($"{MainPath}sales.xml");
-            Console.WriteLine(ImportSales(carDealerContext, inputXml));
+            Console.WriteLine(GetCarsWithDistance(carDealerContext));
         }
         //01  Import Suppliers
         public static string ImportSuppliers(CarDealerContext context, string inputXml)
@@ -155,6 +157,32 @@
             context.Sales.AddRange(salesToAdd);
             context.SaveChanges();
             return $"Successfully imported {salesToAdd.Count}";
+        }
+        // 06 Export Cars With Distance
+        public static string GetCarsWithDistance(CarDealerContext context)
+        {
+            StringBuilder sb = new StringBuilder();
+
+            ExportCarDto[] cars = context.Cars
+                .Where(c => c.TravelledDistance > 2000000)
+                .OrderBy(c => c.Make)
+                .ThenBy(c => c.Model)
+                .Take(10)
+                .Select(c => new ExportCarDto
+                {
+                    Make = c.Make,
+                    Model = c.Model,
+                    TraveledDistance = c.TravelledDistance
+                }).ToArray();
+
+            XmlRootAttribute root = new XmlRootAttribute("cars");
+            XmlSerializer serializer = new XmlSerializer(typeof(ExportCarDto[]), root);
+             StringWriter writer = new StringWriter(sb);
+
+            XmlSerializerNamespaces namespaces = new XmlSerializerNamespaces();
+            namespaces.Add(string.Empty, string.Empty);
+            serializer.Serialize(writer, cars,namespaces);
+            return sb.ToString().TrimEnd();
         }
     }
 }
